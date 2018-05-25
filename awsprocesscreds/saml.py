@@ -150,12 +150,18 @@ class GenericFormsBasedAuthenticator(SAMLAuthenticator):
         login_form_html_node = self._parse_form_from_html(response.text)
         if login_form_html_node is None:
             raise SAMLError(self._ERROR_NO_FORM % endpoint)
-        form_action = urljoin(endpoint,
-                              login_form_html_node.attrib.get('action', ''))
+
+        my_action = login_form_html_node.attrib.get('action', '')
+        if my_action:
+            form_action = urljoin(endpoint, my_action)
+        else:
+            form_action = response.url
         if not form_action.lower().startswith('https://'):
             raise SAMLError('Your SAML IdP must use HTTPS connection')
-        payload = dict((tag.attrib['name'], tag.attrib.get('value', ''))
-                       for tag in login_form_html_node.findall(".//input"))
+        payload = dict(
+                      (tag.attrib.get('name', ''),
+                       tag.attrib.get('value', ''))
+            for tag in login_form_html_node.findall(".//input"))
         return form_action, payload
 
     def _assert_non_error_response(self, response):
@@ -261,6 +267,13 @@ class ADFSFormsBasedAuthenticator(GenericFormsBasedAuthenticator):
                 config.get('saml_provider') == 'adfs')
 
 
+class F5FormsBasedAuthenticator(GenericFormsBasedAuthenticator):
+
+    def is_suitable(self, config):
+        return (config.get('saml_authentication_type') == 'form' and
+                config.get('saml_provider') == 'f5')
+
+
 class FormParser(six.moves.html_parser.HTMLParser):
     def __init__(self):
         """Parse an html saml login form."""
@@ -306,8 +319,8 @@ class FormParser(six.moves.html_parser.HTMLParser):
 class SAMLCredentialFetcher(CachedCredentialFetcher):
     SAML_FORM_AUTHENTICATORS = {
         'okta': OktaAuthenticator,
-        'adfs': ADFSFormsBasedAuthenticator
-
+        'adfs': ADFSFormsBasedAuthenticator,
+        'f5': F5FormsBasedAuthenticator
     }
 
     def __init__(self, client_creator, provider_name, saml_config,
