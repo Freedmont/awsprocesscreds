@@ -83,6 +83,7 @@ def f5_config():
         'saml_provider': 'f5',
     }
 
+
 @pytest.fixture
 def mock_authenticator():
     return mock.Mock(spec=SAMLAuthenticator)
@@ -488,8 +489,7 @@ class TestF5Authenticator(object):
         }
         assert not f5_auth.is_suitable(config)
 
-    def test_uses_f5_fields(self, f5_auth, mock_requests_session,
-                              f5_config):
+    def test_uses_f5_fields(self, f5_auth, mock_requests_session, f5_config):
         f5_login_form = (
             '<html>'
             '<form>'
@@ -499,7 +499,8 @@ class TestF5Authenticator(object):
             '</html>'
         )
         mock_requests_session.get.return_value = mock.Mock(
-            spec=requests.Response, status_code=200, text=f5_login_form, url='https://example.com/my.policy'
+            spec=requests.Response, status_code=200, text=f5_login_form,
+            url='https://example.com/my.policy'
         )
         mock_requests_session.post.return_value = mock.Mock(
             spec=requests.Response, status_code=200, text=(

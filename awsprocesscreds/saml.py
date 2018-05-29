@@ -151,9 +151,9 @@ class GenericFormsBasedAuthenticator(SAMLAuthenticator):
         if login_form_html_node is None:
             raise SAMLError(self._ERROR_NO_FORM % endpoint)
 
-        my_action = login_form_html_node.attrib.get('action', '')
-        if my_action:
-            form_action = urljoin(endpoint, my_action)
+        parsed_form_action = login_form_html_node.attrib.get('action', '')
+        if parsed_form_action:
+            form_action = urljoin(endpoint, parsed_form_action)
         else:
             form_action = response.url
         if not form_action.lower().startswith('https://'):
