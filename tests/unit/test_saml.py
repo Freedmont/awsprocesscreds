@@ -9,6 +9,7 @@ import pytest
 import requests
 
 from awsprocesscreds.saml import ADFSFormsBasedAuthenticator
+from awsprocesscreds.saml import F5FormsBasedAuthenticator
 from awsprocesscreds.saml import FormParser
 from awsprocesscreds.saml import GenericFormsBasedAuthenticator
 from awsprocesscreds.saml import OktaAuthenticator
@@ -36,6 +37,11 @@ def okta_auth(prompter, mock_requests_session):
 @pytest.fixture
 def adfs_auth(prompter, mock_requests_session):
     return ADFSFormsBasedAuthenticator(prompter, mock_requests_session)
+
+
+@pytest.fixture
+def f5_auth(prompter, mock_requests_session):
+    return F5FormsBasedAuthenticator(prompter, mock_requests_session)
 
 
 @pytest.fixture
@@ -69,6 +75,15 @@ def adfs_config():
 
 
 @pytest.fixture
+def f5_config():
+    return {
+        'saml_endpoint': 'https://example.com',
+        'saml_authentication_type': 'form',
+        'saml_username': 'monty',
+        'saml_provider': 'f5',
+    }
+
+@pytest.fixture
 def mock_authenticator():
     return mock.Mock(spec=SAMLAuthenticator)
 
@@ -81,6 +96,14 @@ def basic_form():
         '</form>'
     )
 
+
+@pytest.fixture
+def actionless_form():
+    return (
+        '<form>'
+        '<input name="spam" value="eggs"/>'
+        '</form>'
+    )
 
 @pytest.fixture
 def cache():
@@ -451,6 +474,56 @@ class TestADFSAuthenticator(object):
             data={
                 'ctl00$ContentPlaceHolder1$UsernameTextBox': 'monty',
                 'ctl00$ContentPlaceHolder1$PasswordTextBox': 'mypassword'
+            }
+        )
+
+
+class TestF5Authenticator(object):
+    def test_is_suitable(self, f5_auth, f5_config):
+        assert f5_auth.is_suitable(f5_config)
+
+    def test_non_form_not_suitable(self, f5_auth):
+        config = {
+            'saml_authentication_type': 'javascript',
+            'saml_provider': 'f5',
+        }
+        assert not f5_auth.is_suitable(config)
+
+    def test_non_f5_not_suitable(self, f5_auth):
+        config = {
+            'saml_authentication_type': 'form',
+            'saml_provider': 'okta',
+        }
+        assert not f5_auth.is_suitable(config)
+
+    def test_uses_f5_fields(self, f5_auth, mock_requests_session,
+                              f5_config):
+        f5_login_form = (
+            '<html>'
+            '<form>'
+            '<input name="username"/>'
+            '<input name="password"/>'
+            '</form>'
+            '</html>'
+        )
+        mock_requests_session.get.return_value = mock.Mock(
+            spec=requests.Response, status_code=200, text=f5_login_form, url='https://example.com/my.policy'
+        )
+        mock_requests_session.post.return_value = mock.Mock(
+            spec=requests.Response, status_code=200, text=(
+                '<form><input name="SAMLResponse" '
+                'value="fakeassertion"/></form>'
+            )
+        )
+
+        saml_assertion = f5_auth.retrieve_saml_assertion(f5_config)
+        assert saml_assertion == 'fakeassertion'
+
+        mock_requests_session.post.assert_called_with(
+            "https://example.com/my.policy", verify=True,
+            data={
+                'username': 'monty',
+                'password': 'mypassword'
             }
         )
 
