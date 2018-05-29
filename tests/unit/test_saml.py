@@ -98,14 +98,6 @@ def basic_form():
 
 
 @pytest.fixture
-def actionless_form():
-    return (
-        '<form>'
-        '<input name="spam" value="eggs"/>'
-        '</form>'
-    )
-
-@pytest.fixture
 def cache():
     return {}
 
