@@ -38,8 +38,8 @@ arguments:
 
 * ``-e / --endpoint`` - Your SAML idp endpoint.
 * ``-u / --username`` - Your SAML username.
-* ``-p / --provider`` - The name of your SAML provider. Currently okta and
-  adfs are supported.
+* ``-p / --provider`` - The name of your SAML provider. Currently okta, f5
+  and adfs are supported.
 * ``-a / --role-arn``- The role arn you wish to assume. Your SAML provider
   must be configured to give you access to this arn.
 
@@ -55,11 +55,20 @@ To configure this provider, you need create a profile using the
 for more details on this config option.
 
 
+
 Example okta configuration::
 
     [profile okta]
     region = us-west-2
     credential_process = awsprocesscreds-saml -e https://example.okta.com/home/amazon_aws/blob/123 -u 'monty@example.com' -p okta -a arn:aws:iam::123456789012:role/okta-dev
+
+
+Example f5 configuration::
+
+    [profile f5]
+    region = us-west-2
+    credential_process = awsprocesscreds-saml -e https://sso.example.com/aws -u 'monty' -p f5 -a arn:aws:iam::123456789012:role/f5-dev
+
 
 Example adfs configuration::
 
